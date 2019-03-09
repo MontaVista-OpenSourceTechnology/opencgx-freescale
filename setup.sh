@@ -55,6 +55,7 @@ LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-montavista-cgl.git
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-freescale.git;branch=thud \
 MACHINE@ls1043ardb \
 DISTRO@mvista-cgx \
+CONFIG@EXTRA_IMAGEDEPENDS_remove_ls1043ardb=atf \
 "
 TOPDIR=$(dirname $THIS_SCRIPT)
 buildtar=""
