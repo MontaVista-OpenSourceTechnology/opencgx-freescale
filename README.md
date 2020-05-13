@@ -5,8 +5,8 @@ Montavista Software, LLC. release of ls1043ardb.
 How to use:
 ==========
 ```
-git clone --recursive https://github.com/MontaVista-OpenSourceTechnology/opencgx-freescale-2.6
-cd opencgx-freescale-2.6
+git clone --recursive https://github.com/MontaVista-OpenSourceTechnology/opencgx-freescale
+cd opencgx-freescale
 source setup.sh
 ```
 Optionally, you can pass setup.sh a directory name to use instead of the
@@ -39,7 +39,7 @@ poky/oe-init-build-env script.
 directory layout:
 ================
 ```
-opencgx-freescale-2.6/
+opencgx-freescale/
        project - bitbake project for the ls1043ardb project build
        buildtools - build tools to provide minimal build requirement for poky builds
        layers - layers for building ls1043ardb project
