@@ -40,7 +40,6 @@ LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-clang.git;branch=m
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-virtualization.git;branch=master \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-qa.git;branch=master;layer=meta-qa-framework \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-qa.git;branch=master;layer=meta-qa-testsuites \
-LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-montavista-cgx.git;branch=master;layer=qemu-bsp \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-montavista-cgx.git;branch=master \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-openembedded.git;branch=master;layer=meta-perl \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-openembedded.git;branch=master;layer=meta-gnome \
@@ -50,18 +49,23 @@ LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-selinux.git;branch
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-security.git;branch=master \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-cgl.git;branch=master;layer=meta-cgl-common \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-cloud-services.git;branch=master \
-LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-cloud-services.git;branch=master;layer=meta-openstack \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-montavista-cgl.git;branch=master \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-freescale.git;branch=master \
 MACHINE@ls1043ardb \
+MACHINE@ls1028ardb \
+MACHINE@imx8qm-mek \
+MACHINE@imx8mq-evk \
+MACHINE@imx6ulevk \
+CONFIG@PREFERRED_PROVIDER_virtual/kernel:imx8qm-mek=linux-imx \
+CONFIG@PREFERRED_PROVIDER_virtual/kernel:imx8mq-evk=linux-imx \
+CONFIG@PREFERRED_PROVIDER_virtual/kernel:imx6ulevk=linux-imx \
+CONFIG@PREFERRED_PROVIDER_virtual/kernel:ls1043ardb=linux-qoriq \
+CONFIG@PREFERRED_PROVIDER_virtual/kernel:ls1028ardb=linux-qoriq \
+CONFIG@ACCEPT_FSL_EULA=1 \
+CONFIG@IMAGE_FSTYPES=ext2.gz \
 DISTRO@mvista-cgx \
-CONFIG@EXTRA_IMAGEDEPENDS:remove:ls1043ardb=atf \
 "
 TOPDIR=$(dirname $THIS_SCRIPT)
-buildtar=""
-URL=""
-BUILD_TOOLS_LOCATION=http://downloads.yoctoproject.org/releases/yocto/yocto-3.1/buildtools/
-buildtar=x86_64-buildtools-extended-nativesdk-standalone-3.1.sh
 
 for config in $REPO_CONFIG; do
     VAR=$(echo $config | cut -d @ -f 1)
