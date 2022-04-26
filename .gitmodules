@@ -44,5 +44,5 @@
 	branch = thud
 [submodule "layers/meta-freescale"]
 	path = layers/meta-freescale
-	url = https://github.com/MontaVista-OpenSourceTechnology/meta-freescale.git
+	url = https://github.com/Freescale/meta-freescale
 	branch = thud
