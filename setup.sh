@@ -52,6 +52,7 @@ LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-cloud-services.git
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-montavista-cgl.git;branch=master \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-freescale.git;branch=master \
 MACHINE@ls1043ardb \
+MACHINE@ls1046ardb \
 MACHINE@ls1028ardb \
 MACHINE@imx8qm-mek \
 MACHINE@imx8mq-evk \
@@ -60,6 +61,7 @@ CONFIG@PREFERRED_PROVIDER_virtual/kernel:imx8qm-mek=linux-imx \
 CONFIG@PREFERRED_PROVIDER_virtual/kernel:imx8mq-evk=linux-imx \
 CONFIG@PREFERRED_PROVIDER_virtual/kernel:imx6ulevk=linux-imx \
 CONFIG@PREFERRED_PROVIDER_virtual/kernel:ls1043ardb=linux-qoriq \
+CONFIG@PREFERRED_PROVIDER_virtual/kernel:ls1046ardb=linux-qoriq \
 CONFIG@PREFERRED_PROVIDER_virtual/kernel:ls1028ardb=linux-qoriq \
 CONFIG@ACCEPT_FSL_EULA=1 \
 CONFIG@IMAGE_FSTYPES=ext2.gz \
