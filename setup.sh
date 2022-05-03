@@ -50,7 +50,7 @@ LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-security.git;branc
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-cgl.git;branch=kirkstone-cgx;layer=meta-cgl-common \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-cloud-services.git;branch=kirkstone-cgx \
 LAYER@https://github.com/MontaVista-OpenSourceTechnology/meta-montavista-cgl.git;branch=kirkstone-cgx \
-LAYER@https://github.com/Freescale/meta-freescale.git;branch=master \
+LAYER@https://github.com/Freescale/meta-freescale.git;branch=kirkstone \
 MACHINE@ls1043ardb \
 MACHINE@ls1046ardb \
 MACHINE@ls1028ardb \

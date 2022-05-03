@@ -45,4 +45,4 @@
 [submodule "layers/meta-freescale"]
 	path = layers/meta-freescale
 	url = https://github.com/Freescale/meta-freescale
-	branch = master 
+	branch = kirkstone 
