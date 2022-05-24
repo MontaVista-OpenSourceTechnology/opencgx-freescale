@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2009-2018 MontaVista Software, LLC.  All rights reserved.
 #
@@ -23,7 +23,7 @@ from optparse import OptionParser, OptionGroup
 import os
 import sys
 import logging
-from urlparse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 try:
     from MVLContent.MVLContentTools import ContentTools
 except ImportError:
@@ -71,7 +71,7 @@ class CmdOptions(object):
         """
         logger.log(logging.DEBUG, "validating cmdline options")
         if options.uri == None:
-            options.uri = raw_input('Enter URI for listing content objects: ')
+            options.uri = eval(input('Enter URI for listing content objects: '))
         if options.outputfile and (os.path.basename(options.outputfile) != options.outputfile):
            options.downloaddir = os.path.dirname(options.outputfile)
            options.outputfile = os.path.basename(options.outputfile) 
@@ -125,6 +125,8 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
 
     #user.initialize(options)
+    if "MV_DEBUG" in os.environ and os.environ["MV_DEBUG"] == "1":
+       options.isDebug = True
 
     if options.isDebug:
         logger.log(logging.DEBUG, 'Running in Debug Mode')
@@ -147,7 +149,7 @@ if __name__ == '__main__':
         downloadPath = contentTools.downloadFile(options.uri, options.downloaddir, options.dirprefix, options=options, destFile=options.outputfile)
 
         if downloadPath != None :
-            print 'File fetched successfully.\nDownload path: ' + downloadPath
+            print(('File fetched successfully.\nDownload path: ' + downloadPath))
 
         else :
             if not options.missingok :

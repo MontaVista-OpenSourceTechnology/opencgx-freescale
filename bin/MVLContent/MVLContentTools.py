@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2010-2011 MontaVista Software, LLC.  All rights reserved.
 #
@@ -19,22 +19,22 @@ import time
 import shutil
 import pickle
 import base64
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import socket
-import cookielib
+import http.cookiejar
 import tempfile
-from urlparse import urlparse
+from urllib.parse import urlparse
 import getpass
 from xml.dom.minidom import parse, getDOMImplementation
 from xml.parsers.expat import ExpatError
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 import ssl
 try :
    ssl._create_default_https_context = ssl._create_unverified_context
 except:
    pass
-import urllib
-from urllib import splittype, splithost, splituser, splitpasswd
+import urllib.request, urllib.parse, urllib.error
+from urllib.parse import splittype, splithost, splituser, splitpasswd
 
 ContentToolVersion = "1.8"
 
@@ -207,13 +207,20 @@ class ContentCache:
             os.mkdir(cacheDir)
         return cacheDir
     def getCookieFilePath(self, url, username):
+        cookieCommand = "git config http.cookiefile"
+        try:
+            cookies=subprocess.check_output(cookieCommand, shell=True)
+        except Exception:
+            cookies=None
+        if cookies:
+           return cookies.strip()
         cookies = os.path.join(self.getCookieDir(url, username), "cookies.txt")
         logger.log(logging.DEBUG, "cookie = " + cookies)
         return cookies
     def cleanCache(self, url):
         dir = self.getCacheXMLDir(url)
         if os.path.exists(dir) :
-	    try:
+            try:
                shutil.rmtree(dir)
             except Exception:
                logger.log(logging.DEBUG, "Failed to clean cache")
@@ -238,7 +245,7 @@ class User:
     def __init__(self, username=None, password=None, uri=None):
         self.__username = username
         if password != None:
-            self.__password = base64.b64encode(password)
+            self.__password = base64.b64encode(password.encode("utf-8"))
         self.__uri = uri
         self.__retryCount = 0
 
@@ -250,8 +257,8 @@ class User:
         return self.__username
     def getPassword(self):
         try :
-            return base64.b64decode(self.__password)
-        except TypeError, e:
+            return base64.b64decode(self.__password).decode("utf-8")
+        except TypeError as e:
             sys.stderr.write('Error: Password decode failure - %s\n' % str(e))
             return ""
     def getUri(self):
@@ -259,7 +266,7 @@ class User:
     def setUsername(self, value):
         self.__username = value
     def setPassword(self, value):
-        self.__password = base64.b64encode(value)
+        self.__password = base64.b64encode(value.encode("utf-8"))
     def setUri(self, value):
         self.__uri = value
     def createElement(self, dom):
@@ -269,13 +276,13 @@ class User:
             element = self.createElement(dom)
 
         element.setAttribute("name", self.getUsername())
-        element.setAttribute("password", self.__password)
+        element.setAttribute("password", self.__password.decode("utf-8"))
         element.setAttribute("uri", self.getUri())
         element.setAttribute("retry-count", str(self.getRetryCount()))
         return element
     def fromXML(self, element):
         self.__username = element.attributes["name"].value
-        self.__password = element.attributes["password"].value
+        self.__password = element.attributes["password"].value.encode("utf-8")
         self.__uri = element.attributes["uri"].value
         self.__retryCount = int(element.attributes["retry-count"].value)
 
@@ -292,10 +299,10 @@ class PasswordManager:
     def removeUser(self, user):
         del self.__users[user.getUri()]
     def findUserByURI(self, uri):
-        for k, v in self.__users.iteritems() :
+        for k, v in list(self.__users.items()) :
             if uri == k :
                 return v
-        for k, v in self.__users.iteritems() :
+        for k, v in list(self.__users.items()) :
             if self.isSubURI(k, uri) or self.isSubURI(uri, k):
                 logger.log(logging.DEBUG, "found user credential from content password manager")
                 return v
@@ -336,7 +343,7 @@ class PasswordManager:
                         user = User()
                         user.fromXML(node)
                         self.addUser(user)
-                for v in self.__users.itervalues() :
+                for v in list(self.__users.values()) :
                     v.setRetryCount(0)
             except Exception:
                 logger.log(logging.DEBUG, "failed to load token file")
@@ -354,15 +361,15 @@ class PasswordManager:
             impl = getDOMImplementation()
             dom = impl.createDocument(None, "user-credential", None)
             top_element = dom.documentElement
-            for user in self.__users.itervalues() :
+            for user in list(self.__users.values()) :
                 element = user.toXML(dom)
                 top_element.appendChild(element)
 
             output = open(self.__tokenFilePath, "wb", -1)
-            output.write(pretty_print(dom))
-            os.chmod(self.__tokenFilePath, 0600)
+            output.write(pretty_print(dom).encode("utf-8"))
+            os.chmod(self.__tokenFilePath, 0o600)
             logger.log(logging.DEBUG, "saving token to file: " + self.__tokenFilePath)
-        except EnvironmentError, e:
+        except EnvironmentError as e:
             sys.stderr.write('Error: [Errno ' + str(e.errno) + '] ')
             sys.stderr.write(str(e.strerror))
             if e.filename != None:
@@ -397,7 +404,7 @@ def getDefaultContentCacheDir(url):
     return contentCache.getCacheXMLDir(url)
 def getReturnStatus(output):
     errCode = None
-    lines = output.splitlines()
+    lines = output.encode().splitlines()
     for line in lines:
         line = line.lstrip()
         if line.startswith("HTTP/1.") :
@@ -428,28 +435,30 @@ def downloadFileUsingURLLib(url, workingdir=os.getcwd(), dirPrefix=None, verbose
         username = user.getUsername()
     cookiesFilePath = getCookiesFilePath(url, username)
     if options.cookie:
-       print cookiesFilePath
+       print(cookiesFilePath)
        sys.exit(0)
     logger.log(logging.DEBUG, 'Starting downloading file using urllib2')
     logger.log(logging.DEBUG, 'url=' + url)
     logger.log(logging.DEBUG, 'workingdir=' + workingdir)
+    if cookiesFilePath and not os.path.exists(os.path.dirname(cookiesFilePath)):
+       os.makedirs(os.path.dirname(cookiesFilePath))
     if dirPrefix != None :
         logger.log(logging.DEBUG, 'dirPrefix=' + dirPrefix)
     try :
-        cj = cookielib.MozillaCookieJar()
+        cj = http.cookiejar.MozillaCookieJar()
         if os.path.exists(cookiesFilePath) :
             cj.load(cookiesFilePath)
-    except cookielib.LoadError:
-        cj = cookielib.LWPCookieJar()
+    except http.cookiejar.LoadError:
+        cj = http.cookiejar.LWPCookieJar()
         try :
             if os.path.exists(cookiesFilePath) :
                 cj.load(cookiesFilePath)
-        except cookielib.LoadError:
-            pass
+        except http.cookiejar.LoadError:
+            cj = http.cookiejar.MozillaCookieJar()
     opener = None
-    
-   
-    scheme, sel_url = urllib.splittype(url)
+
+
+    scheme, sel_url = urllib.parse.splittype(url)
     if scheme.lower() == 'ftp':
         import re
         valid_ftp_url = re.compile('^ftp://([A-Za-z0-9_-]+:[A-Za-z0-9_-]+@)?(.*)$')
@@ -463,15 +472,15 @@ def downloadFileUsingURLLib(url, workingdir=os.getcwd(), dirPrefix=None, verbose
             raise Exception(invalid_ftp_msg)
 
         sel_host, sel_path = splithost(sel_url)
-        
+
         if sel_host is None:
             raise Exception(invalid_ftp_msg)
 
         sel_user, host = splituser(sel_host)
-        
+
         if not sel_user is None:
             sel_user, sel_password = splitpasswd(sel_user)
-            
+
             if not sel_user is None and len(sel_user) > 0 and not sel_password is None and len(sel_password) > 0:
                 # reconstruct url
                 url = "ftp://%s:%s@%s%s" % (sel_user, sel_password, host, sel_path)
@@ -483,26 +492,26 @@ def downloadFileUsingURLLib(url, workingdir=os.getcwd(), dirPrefix=None, verbose
                     user.setPassword(sel_password)
                     logger.log(logging.DEBUG, 'Updating user credential for: ' + user.getUsername() + ' in content password manager')
 
-        
+
         else:
             if not user is None:
-                url = "ftp://%s:%s@%s%s" % (user.getUsername(), user.getPassword(), host, sel_path)        
-               
-        
-    if user != None:
+                url = "ftp://%s:%s@%s%s" % (user.getUsername(), user.getPassword(), host, sel_path)
+
+
+    if user != None and not options.checkuri:
         user.setRetryCount(user.getRetryCount() + 1)
-        passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        passman = urllib.request.HTTPPasswordMgrWithDefaultRealm()
         passman.add_password(None, url, user.getUsername(), user.getPassword())
-        authhandler = urllib2.HTTPBasicAuthHandler(passman)
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj), authhandler)
+        authhandler = urllib.request.HTTPBasicAuthHandler(passman)
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj), authhandler)
     else :
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
 
     r = None
     localFile = None
     try:
         if verbose :
-            print '\tfetching ' + url + '...'
+            print(('\tfetching ' + url + '...'))
         # timeout after 60 seconds of blocking operations like the connection attempt
         r = opener.open(url, timeout=timeout)
         if hasattr(options, 'checkuri') and options.checkuri:
@@ -525,11 +534,11 @@ def downloadFileUsingURLLib(url, workingdir=os.getcwd(), dirPrefix=None, verbose
         dirname = os.path.dirname(filenamePath)
         if not os.path.exists(dirname) :
             os.makedirs(dirname)
-        localFile = open(filenamePath, 'w')
+        localFile = open(filenamePath, 'wb')
         localFile.write(r.read())
         cj.save(cookiesFilePath)
         return filenamePath
-    except urllib2.HTTPError, e :
+    except urllib.error.HTTPError as e :
         if hasattr(options, 'checkuri') and options.checkuri:
            sys.exit(1)
         if hasattr(e, 'code') and e.code == 401 :
@@ -544,7 +553,7 @@ def downloadFileUsingURLLib(url, workingdir=os.getcwd(), dirPrefix=None, verbose
                 logger.log(logging.DEBUG, 'program exists with error code 2\n')
                 sys.exit(2)
             else :
-                username = raw_input('Please enter username: ')
+                username = input('Please enter username: ')
                 password = getpass.getpass('Please enter password: ')
                 options.username = None
                 options.password = None
@@ -575,7 +584,7 @@ def downloadFileUsingURLLib(url, workingdir=os.getcwd(), dirPrefix=None, verbose
             elif e.code == 404 and (hasattr(options, 'missingok') and options.missingok) and verbose:
                 logger.log(logging.WARNING, 'Failed to download file. File not found ' + url)
 
-    except urllib2.URLError, e :
+    except urllib.error.URLError as e :
         sys.stderr.write('URL Error: ')
         if hasattr(e, 'code') :
             sys.stderr.write(str(e.code) + '\n')
@@ -590,7 +599,7 @@ def downloadFileUsingURLLib(url, workingdir=os.getcwd(), dirPrefix=None, verbose
         sys.stderr.write('Exiting.\n')
         logger.log(logging.DEBUG, 'program exists with error code 3\n')
         sys.exit(3)
-    except ValueError, e :
+    except ValueError as e :
         exc_type, exc_value, exc_traceback = sys.exc_info()
         sys.stderr.write(str(exc_type) + ', ' + str(exc_value) + '\n')
         if hasattr(e, 'args') :
@@ -601,11 +610,11 @@ def downloadFileUsingURLLib(url, workingdir=os.getcwd(), dirPrefix=None, verbose
         sys.stderr.write('socket timeout\n')
         sys.stderr.write('Retrying download URI: ' + url + '...\n')
         return downloadFileUsingURLLib(url, workingdir, dirPrefix, verbose, timeout, destFile)
-    except socket.error, e :
+    except socket.error as e :
         sys.stderr.write('socket.error: (' + str(e) + ')\n')
         sys.stderr.write('Retrying download. URI: ' + url + '...\n')
         return downloadFileUsingURLLib(url, workingdir, dirPrefix, verbose, timeout, destFile)
-    except IOError, e :
+    except IOError as e :
         parsed = urlparse(url)
         srcname = parsed[2]
         if e.errno == errno.EFBIG and (hasattr(options, 'missingok') and options.missingok):
@@ -638,11 +647,11 @@ def downloadFile(url, workingDir=os.getcwd(), dirPrefix=None, options=None, verb
            return downloadFileUsingSsh(url, workingDir, dirPrefix, verbose, timeout)
         if options != None and options.wget :
             return downloadFileUsingWget(url, workingDir, dirPrefix, verbose, timeout, destFile)
-        else :
-	    try:
+        else:
+            try:
                return downloadFileUsingURLLib(url, workingDir, dirPrefix, verbose, timeout, destFile)
-	    except MemoryError:
-	       return downloadFileUsingWget(url, workingDir, dirPrefix, verbose, timeout, destFile)
+            except MemoryError:
+               return downloadFileUsingWget(url, workingDir, dirPrefix, verbose, timeout, destFile)
     else :
         if url == '' :
             sys.stderr.write('\nError: Empty URI specified.\n')
@@ -667,7 +676,7 @@ def downloadFile(url, workingDir=os.getcwd(), dirPrefix=None, options=None, verb
             else :
                 dstname = os.path.join(workingDir, dirPrefix)
             if verbose :
-                print '\tcopying ' + srcname + '...'
+                print(('\tcopying ' + srcname + '...'))
 
             try :
                 if hasattr(options, 'missingok') and options.missingok :
@@ -682,7 +691,7 @@ def downloadFile(url, workingDir=os.getcwd(), dirPrefix=None, options=None, verb
                 logger.log(logging.DEBUG, 'copy to: ' + dstname)
                 filename = os.path.basename(srcname)
                 return os.path.join(dstname, filename)
-            except IOError, e :
+            except IOError as e :
                 sys.stderr.write('IO Error: ')
                 sys.stderr.write(str(e.strerror) + ' ' + srcname)
                 sys.stderr.write('\nExiting.\n')
@@ -702,7 +711,7 @@ def downloadFileUsingSsh(url, workingdir, dirPrefix=None, verbose=False, timeout
     if not os.path.isdir(downloadDir):
        os.makedirs(downloadDir)
     if verbose:
-       print '\tfetching ' + url + '...'
+       print(('\tfetching ' + url + '...'))
     p = subprocess.Popen(sshArgs, cwd=workingdir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdoutdata, stderrdata) = p.communicate()
     retcode = p.returncode
@@ -760,7 +769,7 @@ def downloadFileUsingWget(url, workingdir, dirPrefix=None, verbose=False, timeou
     else:
        outputArgs = []
     if verbose:
-        print '\tfetching ' + url + '...'
+        print(('\tfetching ' + url + '...'))
     wgetArgs = ['wget', checkuriflag, '-S', '-m', '-nd', '--no-check-certificate', '--continue', '--dot-style=mega', '--retry-connrefused', '--tries', str(maxDownloadRetryCount), '--timeout', str(timeout)] + outputArgs + userArgs + cookieArgs + [ url]
     if dirPrefix != None :
         wgetArgs.insert(1, '--directory-prefix=' + dirPrefix)
@@ -797,7 +806,7 @@ def downloadFileUsingWget(url, workingdir, dirPrefix=None, verbose=False, timeou
                 logger.log(logging.DEBUG, 'program exists with error code 2\n')
                 sys.exit(2)
             else :
-                username = raw_input('Please enter username: ')
+                username = eval(input('Please enter username: '))
                 password = getpass.getpass('Please enter password: ')
                 options.username = None
                 options.password = None
@@ -839,9 +848,9 @@ def downloadFileUsingWget(url, workingdir, dirPrefix=None, verbose=False, timeou
         logger.log(logging.DEBUG, 'downloading file to ' + filenamePath)
 
         if stdoutdata != None and stdoutdata.strip() != '':
-            print stdoutdata
+            print(stdoutdata)
         if stderrdata != None and stderrdata.strip() != '' :
-            print stderrdata
+            print(stderrdata)
         return filenamePath
 
 def removeUserFromPasswordManager(user, logger):
@@ -869,7 +878,7 @@ def getUserFromPasswordManager(logger):
                     return user
                 if options.username == user.getUsername() and options.password == user.getPassword() :
                     return user
-            
+
             if options.username != None and options.password != None and options.uri != None :
                 user = User(options.username, options.password, options.uri)
                 passwordManager.addUser(user)
@@ -939,10 +948,10 @@ class ContentTools(object):
                     defaultURI = configParser.get("Content Source", "uri")
                     options.uri = defaultURI
                     logger.log(logging.DEBUG, 'setting default uri from content source configuration file')
-                except Exception, e:
-                    print 'Warning: unable to get default content source from configuration file:', defaultContentSourceConfigPath
-                    print str(e)
-                    print 'Setting to default Content Source' , finalDefaultURI
+                except Exception as e:
+                    print(('Warning: unable to get default content source from configuration file:', defaultContentSourceConfigPath))
+                    print((str(e)))
+                    print(('Setting to default Content Source' , finalDefaultURI))
 
 
         if options.uri == None:
@@ -959,7 +968,7 @@ class ContentTools(object):
                 dom = parse(filepath)
                 contentObj = self.contentObjectFactory(dom)
                 return contentObj
-            except ExpatError, e:
+            except ExpatError as e:
                 sys.stderr.write('\nError: XML Parsing Exception\n')
                 sys.stderr.write('Error: ' + str(e) + '\n')
         return None
@@ -973,7 +982,7 @@ class ContentTools(object):
                 contentObj = self.contentObjectFactory(dom)
                 contentCache.cleanCache(url)
                 return contentObj
-            except ExpatError, e:
+            except ExpatError as e:
                 sys.stderr.write('\nError: XML Parsing Exception\n')
                 sys.stderr.write('Error: ' + str(e) + '\n')
 
@@ -982,7 +991,7 @@ class ContentTools(object):
         logger.log(logging.DEBUG, 'Getting Content Object using Content Object Factory')
         rootChildNode = dom.childNodes[0]
         rootElementName = rootChildNode.nodeName
-	runApp=(os.path.basename(sys.argv[0]))
+        runApp=(os.path.basename(sys.argv[0]))
         if rootElementName == 'site' :
             site = Site()
             site.fromXML(dom)
